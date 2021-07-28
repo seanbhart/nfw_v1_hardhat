@@ -20,8 +20,6 @@ contract NFTPv1 is Ownable {
 
     // account address => token address => balance amount
     mapping(address => mapping(address => uint)) public getBook;
-    // account address => NFTP symbol => Offer list
-    mapping(address => mapping(string => Offer[])) public getOffers;
     // NFTP symbol => token address => token balance
     mapping(string => mapping(address => uint)) public getNftp;
     // NFTP symbol => owner address
@@ -30,11 +28,17 @@ contract NFTPv1 is Ownable {
     mapping(address => string[]) public getOwnerNftps;
     string[] public nftpList;
 
+    // account address => NFTP symbol => Offer list
+    mapping(address => mapping(string => Offer[])) public getOffers;
+
     event NewDeposit(address address_, uint amount_);
+    event NewFill(string symbol_, address token_, uint amount_);
+    event NewDrain(string symbol_, address token_, uint amount_);
     
-    constructor(address _feeRecipientSetter) Ownable() {
-        feeRecipientSetter = _feeRecipientSetter;
-    }
+    // constructor(address _feeRecipientSetter) Ownable() {
+    //     feeRecipientSetter = _feeRecipientSetter;
+    // }
+    constructor() Ownable() {}
 
     /* BOOK FUNCTIONS
     */
@@ -42,9 +46,28 @@ contract NFTPv1 is Ownable {
         address _token,
         uint _amount
     ) public virtual {
-        require(_amount > 0, 'NFTPv1: ILLEGAL NEGATIVE DEPOSIT AMOUNT');
+        require(_amount > 0, 'NFTPv1: ILLEGAL DEPOSIT AMOUNT');
+
+        uint currentBalance = 0;
+        if (getBook[msg.sender][_token] > 0) {
+            currentBalance = getBook[msg.sender][_token];
+        }
+
         // TODO: transferFrom msg.sender
-        getBook[_token][msg.sender] = getBook[_token][msg.sender] + _amount;
+        getBook[msg.sender][_token] = currentBalance + _amount;
+        emit NewDeposit(msg.sender, _amount);
+    }
+
+    function withdraw(
+        address _token,
+        uint _amount
+    ) public virtual {
+        // Check available Book Balance
+        uint bookBalance = getBook[msg.sender][_token];
+        require(bookBalance >= _amount, 'NFTPv1: INSUFFICIENT BOOK BALANCE');
+        
+        // TODO: transfer to msg.sender
+        getBook[msg.sender][_token] = getBook[msg.sender][_token] - _amount;
         emit NewDeposit(msg.sender, _amount);
     }
 
@@ -67,28 +90,56 @@ contract NFTPv1 is Ownable {
         nftpList.push(_symbol);
     }
 
-    function adjustFromBook(
+    function fill(
         string memory _symbol,
         address _token,
         uint _amount
     ) public virtual {
-        require(getNftpOwner[_symbol] == address(0), 'NFTPv1: TOKEN_EXISTS');
+        // Check ownership
+        require(getNftpOwner[_symbol] == msg.sender, 'NFTPv1: UNAUTHORIZED');
+
+        // Check available Book Balance
         uint bookBalance = getBook[msg.sender][_token];
         require(bookBalance >= _amount, 'NFTPv1: INSUFFICIENT BOOK BALANCE');
 
-        // Check all target token balances in this account's NFTPs
-        string[] memory ownerNftps = getOwnerNftps[msg.sender];
-        uint nftpTokenTotalBalance = 0;
-        uint len = ownerNftps.length;
-        for (uint i=0; i<len; i++) {
-            if (keccak256(bytes(ownerNftps[i])) == keccak256(bytes(_symbol))) {
-                nftpTokenTotalBalance += getNftp[_symbol][_token];
-            }
-        }
+        // Transfer Book Balance to NFTP Balance
+        getBook[msg.sender][_token] = getBook[msg.sender][_token] - _amount;
+        getNftp[_symbol][_token] = getNftp[_symbol][_token] + _amount;
+
+        emit NewFill(_symbol, _token, _amount);
+
+        // // Check all target token balances in this account's NFTPs
+        // string[] memory ownerNftps = getOwnerNftps[msg.sender];
+        // uint nftpTokenTotalBalance = 0;
+        // uint len = ownerNftps.length;
+        // for (uint i=0; i<len; i++) {
+        //     if (keccak256(bytes(ownerNftps[i])) == keccak256(bytes(_symbol))) {
+        //         nftpTokenTotalBalance += getNftp[_symbol][_token];
+        //     }
+        // }
         
-        // The remaining book balance not allocated funds to NFTPs should cover the desired allocation.
-        require(bookBalance - nftpTokenTotalBalance >= _amount, 'NFTPv1: INSUFFICIENT UNALLOCATED BOOK BALANCE');
-        getNftp[_symbol][_token] = _amount;
+        // // The remaining book balance not allocated funds to NFTPs should cover the desired allocation.
+        // require(bookBalance - nftpTokenTotalBalance >= _amount, 'NFTPv1: INSUFFICIENT UNALLOCATED BOOK BALANCE');
+        // getNftp[_symbol][_token] = _amount;
+    }
+
+    function drain(
+        string memory _symbol,
+        address _token,
+        uint _amount
+    ) public virtual {
+        // Check ownership
+        require(getNftpOwner[_symbol] == msg.sender, 'NFTPv1: UNAUTHORIZED');
+
+        // Check available NFTP Balance
+        uint nftpBalance = getNftp[_symbol][_token];
+        require(nftpBalance >= _amount, 'NFTPv1: INSUFFICIENT NFTP BALANCE');
+
+        // Transfer Book Balance to NFTP Balance
+        getNftp[_symbol][_token] = getNftp[_symbol][_token] - _amount;
+        getBook[msg.sender][_token] = getBook[msg.sender][_token] + _amount;
+
+        emit NewDrain(_symbol, _token, _amount);
     }
 
     /* PRIVATE UTILITY FUNCTIONS
