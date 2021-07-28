@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import 'hardhat/console.sol';
+import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
 
 
@@ -53,7 +54,13 @@ contract NFTPv1 is Ownable {
             currentBalance = getBook[msg.sender][_token];
         }
 
-        // TODO: transferFrom msg.sender
+        // Transfer amount from sender to contract for referenced token
+        IERC20 fromToken = IERC20(_token);
+        // require(fromToken.approve(address(this), _amount), 'NFTPv1: ERC20 APPROVAL FAILED');
+        // require(fromToken.allowance(msg.sender, address(this)) >= _amount, 'NFTPv1: ERC20 ALLOWANCE TOO SMALL');
+        fromToken.transferFrom(msg.sender, address(this), _amount);
+
+        // Increase the internal book balance to account for transfer
         getBook[msg.sender][_token] = currentBalance + _amount;
         emit NewDeposit(msg.sender, _amount);
     }

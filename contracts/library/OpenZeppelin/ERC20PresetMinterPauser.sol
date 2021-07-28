@@ -37,7 +37,7 @@ contract ERC20PresetMinterPauser is Context, AccessControlEnumerable, ERC20Burna
      *
      * See {ERC20-constructor}.
      */
-    constructor(string memory name, string memory symbol) ERC20(name, symbol) {
+    constructor(string memory name, string memory symbol, address owner_) ERC20(name, symbol, owner_) {
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
 
         _setupRole(MINTER_ROLE, _msgSender());

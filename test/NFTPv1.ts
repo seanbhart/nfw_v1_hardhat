@@ -7,12 +7,15 @@ import { ethers } from "hardhat";
 describe("NFTPv1 contract", function () {
   // `before`, `beforeEach`, `after`, `afterEach`.
 
-  let nftpFactory: ContractFactory;
-  let nftp: Contract;
   let owner: SignerWithAddress;
   let addr1: SignerWithAddress;
   let addr2: SignerWithAddress;
   let addrs: SignerWithAddress[];
+
+  let erc20Factory: ContractFactory;
+  let erc20: Contract;
+  let nftpFactory: ContractFactory;
+  let nftp: Contract;
 
   var account1 = ethers.Wallet.createRandom();
   var account2 = ethers.Wallet.createRandom();
@@ -20,15 +23,24 @@ describe("NFTPv1 contract", function () {
   var token2 = ethers.Wallet.createRandom();
 
   before(async function () {
-    // Get the ContractFactory and Signers here.
-    nftpFactory = await ethers.getContractFactory("NFTPv1");
     [owner, addr1, addr2, ...addrs] = await ethers.getSigners();
-    // console.log("Deploying contracts with the account:", owner.address);
-    console.log("Deploying contract with owner account.");
+    // console.log("Created signers. Owner:", owner.address);
 
+    // Deploy the test ERC20 token
+    erc20Factory = await ethers.getContractFactory("ERC20");
+    erc20 = await erc20Factory.deploy("DASH token", "DASH", owner.address);
+    console.log("Deployed ERC20");
+
+    // Deploy the NFTP Wallet
+    nftpFactory = await ethers.getContractFactory("NFTPv1");
     nftp = await nftpFactory.deploy();
 
-    await nftp.deposit(token1.address, 100);
+    // Approve and transfer 100 from ERC20 to NFTP Wallet
+    await erc20.approve(nftp.address, 100);
+    await nftp.deposit(erc20.address, 100);
+    console.log(
+      "Deployed NFTP Wallet and deposited initial 100 to owner on token1"
+    );
   });
 
   describe("Deployment", function () {
@@ -38,74 +50,75 @@ describe("NFTPv1 contract", function () {
   });
 
   describe("Balance", function () {
-    it("Should have book value of 100 for sender on token1", async function () {
-      const book = await nftp.getBook(owner.address, token1.address);
+    it("Should have book value of 100 for sender on deployed erc20", async function () {
+      const book = await nftp.getBook(owner.address, erc20.address);
       expect(book).to.equal(100);
     });
   });
 
   describe("Deposit", function () {
-    it("Should have deposited 100 more for a book value of 200 for sender on token1", async function () {
-      await nftp.deposit(token1.address, 100);
-      const book = await nftp.getBook(owner.address, token1.address);
+    it("Should have deposited 100 more for a book value of 200 for sender on erc20", async function () {
+      await erc20.approve(nftp.address, 100);
+      await nftp.deposit(erc20.address, 100);
+      const book = await nftp.getBook(owner.address, erc20.address);
       expect(book).to.equal(200);
     });
   });
 
   describe("Transfer", function () {
     it("Should have transferred 30 from owner", async function () {
-      await nftp.transfer(token1.address, account1.address, 30);
-      const book = await nftp.getBook(owner.address, token1.address);
+      await nftp.transfer(erc20.address, account1.address, 30);
+      const book = await nftp.getBook(owner.address, erc20.address);
       expect(book).to.equal(170);
     });
     it("Should have transferred 30 to account1", async function () {
-      const book = await nftp.getBook(account1.address, token1.address);
+      const book = await nftp.getBook(account1.address, erc20.address);
       expect(book).to.equal(30);
     });
   });
 
   describe("Mint", function () {
-    it("Should have minted an NFTP token with symbol DASH", async function () {
-      await nftp.mint("DASH");
-      const nftpOwner = await nftp.getNftpOwner("DASH");
+    it("Should have minted an NFTP token with symbol nDASH", async function () {
+      await nftp.mint("nDASH");
+      const nftpOwner = await nftp.getNftpOwner("nDASH");
       expect(nftpOwner).to.equal(owner.address);
     });
   });
 
   describe("Fill", function () {
-    it("Should have filled the NFTP token with 100 token1", async function () {
-      await nftp.fill("DASH", token1.address, 100);
-      const nftpBalance = await nftp.getNftp("DASH", token1.address);
+    it("Should have filled the NFTP token with 100 erc20", async function () {
+      await nftp.fill("nDASH", erc20.address, 100);
+      const nftpBalance = await nftp.getNftp("nDASH", erc20.address);
       expect(nftpBalance).to.equal(100);
     });
   });
 
   describe("Balance", function () {
-    it("Should have book value of 70 for sender on token1", async function () {
-      const book = await nftp.getBook(owner.address, token1.address);
+    it("Should have book value of 70 for sender on erc20", async function () {
+      const book = await nftp.getBook(owner.address, erc20.address);
       expect(book).to.equal(70);
     });
   });
 
   describe("Drain", function () {
-    it("Should have drained the NFTP token down to 40 token1", async function () {
-      await nftp.drain("DASH", token1.address, 60);
-      const nftpBalance = await nftp.getNftp("DASH", token1.address);
+    it("Should have drained the NFTP token down to 40 erc20", async function () {
+      await nftp.drain("nDASH", erc20.address, 60);
+      const nftpBalance = await nftp.getNftp("nDASH", erc20.address);
       expect(nftpBalance).to.equal(40);
     });
   });
 
   describe("Balance", function () {
-    it("Should have book value of 130 for sender on token1", async function () {
-      const book = await nftp.getBook(owner.address, token1.address);
+    it("Should have book value of 130 for sender on erc20", async function () {
+      const book = await nftp.getBook(owner.address, erc20.address);
       expect(book).to.equal(130);
     });
   });
 
   describe("Withdraw", function () {
-    it("Should have withdrawn 100 for sender on token1", async function () {
-      await nftp.withdraw(token1.address, 100);
-      const book = await nftp.getBook(owner.address, token1.address);
+    it("Should have withdrawn 100 for sender on erc20", async function () {
+      await nftp.withdraw(erc20.address, 100);
+      const book = await nftp.getBook(owner.address, erc20.address);
       expect(book).to.equal(30);
     });
   });
