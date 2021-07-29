@@ -114,25 +114,8 @@ describe("NFTPv1 contract", function () {
 
   describe("Assign", function () {
     it("Should have assigned NFTP token from owner to account2", async function () {
-      await nftp.mint("nDASH2");
-      await nftp.mint("nDASH3");
-      await nftp.mint("nDASH4");
-      await nftp.mint("nDASH5");
-      await nftp.mint("nDASH6");
-      await nftp.mint("nDASH7");
-      await nftp.mint("nDASH8");
-      await nftp.mint("nDASH9");
-      await nftp.mint("nDASH10");
-      await nftp.mint("nDASH11");
-      await nftp.mint("nDASH12");
-      await nftp.mint("nDASH13");
-      await nftp.mint("nDASH14");
-      await nftp.mint("nDASH15");
-      await nftp.mint("nDASH16");
-      await nftp.mint("nDASH17");
-      await nftp.mint("nDASH18");
-      await nftp.mint("nDASH19");
-      await nftp.mint("nDASH20");
+      const ns = Array.from(Array(2000).keys());
+      ns.forEach(async (n) => await nftp.mint("nDASH" + n));
       await nftp.assign("nDASH", account2.address);
       const nftpOwner = await nftp.getNftpOwner("nDASH");
       expect(nftpOwner).to.equal(account2.address);

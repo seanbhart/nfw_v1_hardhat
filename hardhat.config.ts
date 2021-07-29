@@ -38,6 +38,9 @@ const config: HardhatUserConfig = {
       },
     ],
   },
+  mocha: {
+    timeout: 50000,
+  },
   networks: {
     kovan: {
       url: `${process.env.NETWORK}`,
