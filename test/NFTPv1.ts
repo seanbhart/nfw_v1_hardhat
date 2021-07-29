@@ -17,10 +17,7 @@ describe("NFTPv1 contract", function () {
   let nftpFactory: ContractFactory;
   let nftp: Contract;
 
-  var account1 = ethers.Wallet.createRandom();
   var account2 = ethers.Wallet.createRandom();
-  var token1 = ethers.Wallet.createRandom();
-  var token2 = ethers.Wallet.createRandom();
 
   before(async function () {
     [owner, addr1, addr2, ...addrs] = await ethers.getSigners();
@@ -67,12 +64,12 @@ describe("NFTPv1 contract", function () {
 
   describe("Transfer", function () {
     it("Should have transferred 30 from owner", async function () {
-      await nftp.transfer(erc20.address, account1.address, 30);
+      await nftp.transfer(erc20.address, account2.address, 30);
       const book = await nftp.getBook(owner.address, erc20.address);
       expect(book).to.equal(170);
     });
-    it("Should have transferred 30 to account1", async function () {
-      const book = await nftp.getBook(account1.address, erc20.address);
+    it("Should have transferred 30 to account2", async function () {
+      const book = await nftp.getBook(account2.address, erc20.address);
       expect(book).to.equal(30);
     });
   });
@@ -112,6 +109,33 @@ describe("NFTPv1 contract", function () {
     it("Should have book value of 130 for sender on erc20", async function () {
       const book = await nftp.getBook(owner.address, erc20.address);
       expect(book).to.equal(130);
+    });
+  });
+
+  describe("Assign", function () {
+    it("Should have assigned NFTP token from owner to account2", async function () {
+      await nftp.mint("nDASH2");
+      await nftp.mint("nDASH3");
+      await nftp.mint("nDASH4");
+      await nftp.mint("nDASH5");
+      await nftp.mint("nDASH6");
+      await nftp.mint("nDASH7");
+      await nftp.mint("nDASH8");
+      await nftp.mint("nDASH9");
+      await nftp.mint("nDASH10");
+      await nftp.mint("nDASH11");
+      await nftp.mint("nDASH12");
+      await nftp.mint("nDASH13");
+      await nftp.mint("nDASH14");
+      await nftp.mint("nDASH15");
+      await nftp.mint("nDASH16");
+      await nftp.mint("nDASH17");
+      await nftp.mint("nDASH18");
+      await nftp.mint("nDASH19");
+      await nftp.mint("nDASH20");
+      await nftp.assign("nDASH", account2.address);
+      const nftpOwner = await nftp.getNftpOwner("nDASH");
+      expect(nftpOwner).to.equal(account2.address);
     });
   });
 

@@ -32,9 +32,13 @@ contract NFTPv1 is Ownable {
     // account address => NFTP symbol => Offer list
     mapping(address => mapping(string => Offer[])) public getOffers;
 
-    event NewDeposit(address address_, uint amount_);
-    event NewFill(string symbol_, address token_, uint amount_);
-    event NewDrain(string symbol_, address token_, uint amount_);
+    event Deposit(address account_, address token_, uint amount_);
+    event Withdrawal(address account_, address token_, uint amount_);
+    event Transfer(address token_, address from_, address to_, uint amount_);
+    event Mint(string symbol_, address account_);
+    event Fill(string symbol_, address token_, uint amount_);
+    event Drain(string symbol_, address token_, uint amount_);
+    event Assign(string symbol_, address from_, address to_);
     
     // constructor(address _feeRecipientSetter) Ownable() {
     //     feeRecipientSetter = _feeRecipientSetter;
@@ -56,13 +60,11 @@ contract NFTPv1 is Ownable {
 
         // Transfer amount from sender to contract for referenced token
         IERC20 fromToken = IERC20(_token);
-        // require(fromToken.approve(address(this), _amount), 'NFTPv1: ERC20 APPROVAL FAILED');
-        // require(fromToken.allowance(msg.sender, address(this)) >= _amount, 'NFTPv1: ERC20 ALLOWANCE TOO SMALL');
         fromToken.transferFrom(msg.sender, address(this), _amount);
 
         // Increase the internal book balance to account for transfer
         getBook[msg.sender][_token] = currentBalance + _amount;
-        emit NewDeposit(msg.sender, _amount);
+        emit Deposit(msg.sender, _token, _amount);
     }
 
     function withdraw(
@@ -75,7 +77,7 @@ contract NFTPv1 is Ownable {
         
         // TODO: transfer to msg.sender
         getBook[msg.sender][_token] = getBook[msg.sender][_token] - _amount;
-        emit NewDeposit(msg.sender, _amount);
+        emit Withdrawal(msg.sender, _token, _amount);
     }
 
     function transfer(
@@ -84,6 +86,7 @@ contract NFTPv1 is Ownable {
         uint _amount
     ) public virtual {
         _safeTransfer(_token, msg.sender, _to, _amount);
+        emit Transfer(_token, msg.sender, _to, _amount);
     }
 
     /* NFTP FUNCTIONS
@@ -95,6 +98,8 @@ contract NFTPv1 is Ownable {
         getNftpOwner[_symbol] = msg.sender;
         getOwnerNftps[msg.sender].push(_symbol);
         nftpList.push(_symbol);
+
+        emit Mint(_symbol, msg.sender);
     }
 
     function fill(
@@ -113,7 +118,7 @@ contract NFTPv1 is Ownable {
         getBook[msg.sender][_token] = getBook[msg.sender][_token] - _amount;
         getNftp[_symbol][_token] = getNftp[_symbol][_token] + _amount;
 
-        emit NewFill(_symbol, _token, _amount);
+        emit Fill(_symbol, _token, _amount);
 
         // // Check all target token balances in this account's NFTPs
         // string[] memory ownerNftps = getOwnerNftps[msg.sender];
@@ -146,7 +151,37 @@ contract NFTPv1 is Ownable {
         getNftp[_symbol][_token] = getNftp[_symbol][_token] - _amount;
         getBook[msg.sender][_token] = getBook[msg.sender][_token] + _amount;
 
-        emit NewDrain(_symbol, _token, _amount);
+        emit Drain(_symbol, _token, _amount);
+    }
+
+    function assign(
+        string memory _symbol,
+        address _to
+    ) public virtual {
+        // Check ownership
+        require(getNftpOwner[_symbol] == msg.sender, 'NFTPv1: UNAUTHORIZED');
+
+        // Remove the symbol from the prior owner
+        uint i = 0;
+        while (keccak256(abi.encodePacked(getOwnerNftps[msg.sender][i])) != keccak256(abi.encodePacked(_symbol))) { i++; }
+        delete getOwnerNftps[msg.sender][i];
+        getOwnerNftps[_to].push(_symbol);
+
+        // console.log("from nftps:");
+        // string[] memory nftps = getOwnerNftps[msg.sender];
+        // for(uint j=0; j<nftps.length; j++){
+        //     console.log(nftps[j]);
+        // }
+        // console.log("to nftps:");
+        // nftps = getOwnerNftps[_to];
+        // for(uint j=0; j<nftps.length; j++){
+        //     console.log(nftps[j]);
+        // }
+
+        // Transfer Book Balance to NFTP Balance
+        getNftpOwner[_symbol] = _to;
+
+        emit Assign(_symbol, msg.sender, _to);
     }
 
     /* PRIVATE UTILITY FUNCTIONS
