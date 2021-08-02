@@ -75,7 +75,11 @@ contract NFTPv1 is Ownable {
         uint bookBalance = getBook[msg.sender][_token];
         require(bookBalance >= _amount, 'NFTPv1: INSUFFICIENT BOOK BALANCE');
         
-        // TODO: transfer to msg.sender
+        // Transfer amount from contract to sender for referenced token
+        IERC20 toToken = IERC20(_token);
+        toToken.transfer(msg.sender, _amount);
+
+        // Decrease the internal book balance to account for transfer
         getBook[msg.sender][_token] = getBook[msg.sender][_token] - _amount;
         emit Withdrawal(msg.sender, _token, _amount);
     }

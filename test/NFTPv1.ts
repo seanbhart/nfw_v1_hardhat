@@ -47,9 +47,14 @@ describe("NFTPv1 contract", function () {
   });
 
   describe("Balance", function () {
-    it("Should have book value of 100 for sender on deployed erc20", async function () {
+    it("Should have book value of 100 erc20 for sender", async function () {
       const book = await nftp.getBook(owner.address, erc20.address);
       expect(book).to.equal(100);
+    });
+
+    it("Should have token balance of 500 for sender on deployed erc20", async function () {
+      const balance = await erc20.balanceOf(owner.address);
+      expect(balance).to.equal(500);
     });
   });
 
@@ -59,6 +64,18 @@ describe("NFTPv1 contract", function () {
       await nftp.deposit(erc20.address, 100);
       const book = await nftp.getBook(owner.address, erc20.address);
       expect(book).to.equal(200);
+    });
+  });
+
+  describe("Balance", function () {
+    it("Should have book value of 100 erc20 for sender", async function () {
+      const book = await nftp.getBook(owner.address, erc20.address);
+      expect(book).to.equal(100);
+    });
+
+    it("Should have token balance of 500 for sender on deployed erc20", async function () {
+      const balance = await erc20.balanceOf(owner.address);
+      expect(balance).to.equal(500);
     });
   });
 
@@ -91,7 +108,7 @@ describe("NFTPv1 contract", function () {
   });
 
   describe("Balance", function () {
-    it("Should have book value of 70 for sender on erc20", async function () {
+    it("Should have book value of 70 erc20 for sender", async function () {
       const book = await nftp.getBook(owner.address, erc20.address);
       expect(book).to.equal(70);
     });
@@ -106,7 +123,7 @@ describe("NFTPv1 contract", function () {
   });
 
   describe("Balance", function () {
-    it("Should have book value of 130 for sender on erc20", async function () {
+    it("Should have book value of 130 erc20 for sender", async function () {
       const book = await nftp.getBook(owner.address, erc20.address);
       expect(book).to.equal(130);
     });
@@ -114,8 +131,8 @@ describe("NFTPv1 contract", function () {
 
   describe("Assign", function () {
     it("Should have assigned NFTP token from owner to account2", async function () {
-      const ns = Array.from(Array(2000).keys());
-      ns.forEach(async (n) => await nftp.mint("nDASH" + n));
+      // const ns = Array.from(Array(2000).keys());
+      // ns.forEach(async (n) => await nftp.mint("nDASH" + n));
       await nftp.assign("nDASH", account2.address);
       const nftpOwner = await nftp.getNftpOwner("nDASH");
       expect(nftpOwner).to.equal(account2.address);

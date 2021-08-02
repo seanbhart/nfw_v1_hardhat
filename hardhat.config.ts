@@ -39,7 +39,7 @@ const config: HardhatUserConfig = {
     ],
   },
   mocha: {
-    timeout: 50000,
+    timeout: 60000,
   },
   networks: {
     kovan: {
