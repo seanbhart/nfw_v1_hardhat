@@ -41,7 +41,7 @@ describe("NFTPv1 contract", function () {
   });
 
   describe("Deployment", function () {
-    it("Should set the right owner", async function () {
+    it("Should have set the right owner", async function () {
       expect(await nftp.owner()).to.equal(owner.address);
     });
   });
@@ -52,9 +52,9 @@ describe("NFTPv1 contract", function () {
       expect(book).to.equal(100);
     });
 
-    it("Should have token balance of 500 for sender on deployed erc20", async function () {
+    it("Should have token balance of 400 for sender on deployed erc20", async function () {
       const balance = await erc20.balanceOf(owner.address);
-      expect(balance).to.equal(500);
+      expect(balance).to.equal(400);
     });
   });
 
@@ -68,14 +68,14 @@ describe("NFTPv1 contract", function () {
   });
 
   describe("Balance", function () {
-    it("Should have book value of 100 erc20 for sender", async function () {
+    it("Should have book value of 200 erc20 for sender", async function () {
       const book = await nftp.getBook(owner.address, erc20.address);
-      expect(book).to.equal(100);
+      expect(book).to.equal(200);
     });
 
-    it("Should have token balance of 500 for sender on deployed erc20", async function () {
+    it("Should have token balance of 300 for sender on deployed erc20", async function () {
       const balance = await erc20.balanceOf(owner.address);
-      expect(balance).to.equal(500);
+      expect(balance).to.equal(300);
     });
   });
 
@@ -144,6 +144,18 @@ describe("NFTPv1 contract", function () {
       await nftp.withdraw(erc20.address, 100);
       const book = await nftp.getBook(owner.address, erc20.address);
       expect(book).to.equal(30);
+    });
+  });
+
+  describe("Balance", function () {
+    it("Should have book value of 30 erc20 for sender", async function () {
+      const book = await nftp.getBook(owner.address, erc20.address);
+      expect(book).to.equal(30);
+    });
+
+    it("Should have token balance of 400 for sender on deployed erc20", async function () {
+      const balance = await erc20.balanceOf(owner.address);
+      expect(balance).to.equal(400);
     });
   });
 });
