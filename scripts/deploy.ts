@@ -6,10 +6,10 @@ async function main() {
   console.log("Deploying contracts with the account:", deployer.address);
   console.log("Account balance:", (await deployer.getBalance()).toString());
 
-  const nftpFactory = await ethers.getContractFactory("NFTPv1");
-  const nftp = await nftpFactory.deploy();
+  const nfwFactory = await ethers.getContractFactory("NFWv1");
+  const nfw = await nfwFactory.deploy();
 
-  console.log("nftp address:", nftp.address);
+  console.log("nfw address:", nfw.address);
 }
 
 main()

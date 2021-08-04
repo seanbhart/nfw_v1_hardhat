@@ -2,11 +2,11 @@
 // pragma solidity ^0.8.0;
 
 // import '@openzeppelin/contracts/access/Ownable.sol';
-// import './interfaces/INFTPv1.sol';
-// import './NFTPv1.sol';
+// import './interfaces/INFWv1.sol';
+// import './NFWv1.sol';
 
 
-// contract NFTPv1Factory is Ownable {
+// contract NFWv1Factory is Ownable {
 //     address public feeRecipient;
 //     address public feeRecipientSetter;
 
@@ -30,15 +30,15 @@
 //     }
 
 //     function createToken(string memory _symbol) external {
-//         require(getToken[_symbol] == address(0), 'NFTPv1: TOKEN_EXISTS');
+//         require(getToken[_symbol] == address(0), 'NFWv1: TOKEN_EXISTS');
 
 //         address token;
-//         bytes memory bytecode = type(NFTPv1).creationCode;
-//         bytes32 salt = keccak256(abi.encodePacked('NFTPv1', _symbol));
+//         bytes memory bytecode = type(NFWv1).creationCode;
+//         bytes32 salt = keccak256(abi.encodePacked('NFWv1', _symbol));
 //         assembly {
 //             token := create2(0, add(bytecode, 32), mload(bytecode), salt)
 //         }
-//         INFTPv1(token).initialize(_symbol, msg.sender);
+//         INFWv1(token).initialize(_symbol, msg.sender);
 //         getToken[_symbol] = token;
 //         getAccountToken[_symbol][msg.sender] = token;
 //         tokenList.push(_symbol);
@@ -47,12 +47,12 @@
 //     }
 
 //     function setFeeRecipient(address _feeRecipient) external {
-//         require(msg.sender == feeRecipient, 'NFTPv1: FORBIDDEN');
+//         require(msg.sender == feeRecipient, 'NFWv1: FORBIDDEN');
 //         feeRecipient = _feeRecipient;
 //     }
 
 //     function setFeeRecipientSetter(address _feeRecipientSetter) external {
-//         require(msg.sender == feeRecipient, 'NFTPv1: FORBIDDEN');
+//         require(msg.sender == feeRecipient, 'NFWv1: FORBIDDEN');
 //         feeRecipient = _feeRecipientSetter;
 //     }
 // }

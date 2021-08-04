@@ -38,7 +38,6 @@ contract UniswapV2Router01 is IUniswapV2Router01 {
         uint amountAMin,
         uint amountBMin
     ) private returns (uint amountA, uint amountB) {
-        console.log("Uni _addLiquidity factory: ", factory);
         // create the pair if it doesn't exist yet
         if (IUniswapV2Factory(factory).getPair(tokenA, tokenB) == address(0)) {
             IUniswapV2Factory(factory).createPair(tokenA, tokenB);
