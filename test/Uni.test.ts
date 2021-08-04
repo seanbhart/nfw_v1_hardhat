@@ -8,7 +8,7 @@ import {
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { Address } from "cluster";
-import { Bytes } from "ethers";
+import { BigNumber, Bytes } from "ethers";
 import { ethers } from "hardhat";
 
 describe("NFWv1 contract", function () {
@@ -227,7 +227,7 @@ describe("NFWv1 contract", function () {
       expect(bal2).to.equal(13987);
     });
 
-    it("Should have swapped 5000 token1 for 5000 token3 through token 2 for sender", async function () {
+    it("Should have swapped 5000 token1 for 5000 token3 through token2 for sender", async function () {
       await token1.approve(uniRouter.address, 5000);
       for (let i = 0; i < 5; i++) {
         await uniRouter.swapExactTokensForTokens(
@@ -248,42 +248,87 @@ describe("NFWv1 contract", function () {
     });
   });
 
-  // describe("Remove Liquidity", function () {
-  //   it("Should have 0 of tokens 1&3 (0 of token 2) in Uni pair", async function () {
-  //     await token1.approve(uniRouter.address, 20000);
-  //     await token2.approve(uniRouter.address, 40000);
-  //     await token3.approve(uniRouter.address, 20000);
-  //     for (let i = 0; i < 2; i++) {
-  //       await uniRouter.removeLiquidity(
-  //         token1.address,
-  //         token2.address,
-  //         1000,
-  //         0,
-  //         0,
-  //         owner.address,
-  //         Math.round(Date.now() / 1000) + 30
-  //       );
+  describe("Remove Liquidity", function () {
+    it("Should have 15000 of token1 & 6680 of token2 in Uni pair after removing 10000 liquidity", async function () {
+      await uniPair12.approve(uniRouter.address, 10000);
+      await uniPair23.approve(uniRouter.address, 10000);
+      for (let i = 0; i < 10; i++) {
+        await uniRouter.removeLiquidity(
+          token1.address,
+          token2.address,
+          1000,
+          0,
+          0,
+          owner.address,
+          Math.round(Date.now() / 1000) + 150
+        );
 
-  //       await uniRouter.removeLiquidity(
-  //         token2.address,
-  //         token3.address,
-  //         1000,
-  //         0,
-  //         0,
-  //         owner.address,
-  //         Math.round(Date.now() / 1000) + 30
-  //       );
-  //     }
+        // const [reserve12_0, reserve12_1, timestamp12] =
+        //   await uniPair12.getReserves();
+        // console.log(
+        //   "pair12 reserves: ",
+        //   i,
+        //   BigNumber.from(reserve12_0).toString(),
+        //   BigNumber.from(reserve12_1).toString()
+        // );
 
-  //     const [reserve12_0, reserve12_1, timestamp12] =
-  //       await uniPair12.getReserves();
-  //     expect(reserve12_0).to.equal(0);
-  //     expect(reserve12_1).to.equal(0);
+        // const bal1 = await token1.balanceOf(owner.address);
+        // const bal2 = await token2.balanceOf(owner.address);
+        // console.log(
+        //   "token 1 & 2 balances: ",
+        //   BigNumber.from(bal1).toString(),
+        //   BigNumber.from(bal2).toString()
+        // );
+      }
 
-  //     const [reserve23_0, reserve23_1, timestamp23] =
-  //       await uniPair23.getReserves();
-  //     expect(reserve23_0).to.equal(0);
-  //     expect(reserve23_1).to.equal(0);
-  //   });
-  // });
+      const [reserve12_0, reserve12_1, timestamp12] =
+        await uniPair12.getReserves();
+      expect(reserve12_0).to.equal(15000);
+      expect(reserve12_1).to.equal(6680);
+    });
+
+    it("Should have 8831 of token2 & 11330 of token3 in Uni pair after removing 10000 liquidity", async function () {
+      await uniPair23.approve(uniRouter.address, 10000);
+      for (let i = 0; i < 10; i++) {
+        await uniRouter.removeLiquidity(
+          token2.address,
+          token3.address,
+          1000,
+          0,
+          0,
+          owner.address,
+          Math.round(Date.now() / 1000) + 150
+        );
+      }
+
+      const [reserve23_0, reserve23_1, timestamp23] =
+        await uniPair23.getReserves();
+      expect(reserve23_0).to.equal(8831);
+      expect(reserve23_1).to.equal(11330);
+    });
+  });
+
+  describe("Balance", function () {
+    it("Should have LP token1-2 balance of 9000 for sender", async function () {
+      const lpBalance12 = await uniPair12.balanceOf(owner.address);
+      expect(lpBalance12).to.equal(9000);
+    });
+    it("Should have LP token2-3 balance of 9000 for sender", async function () {
+      const lpBalance23 = await uniPair23.balanceOf(owner.address);
+      expect(lpBalance23).to.equal(9000);
+    });
+
+    it("Should have token balance of 35000 for sender on token1", async function () {
+      const bal1 = await token1.balanceOf(owner.address);
+      expect(bal1).to.equal(35000);
+    });
+    it("Should have token balance of 31990 for sender on token2", async function () {
+      const bal2 = await token2.balanceOf(owner.address);
+      expect(bal2).to.equal(31990);
+    });
+    it("Should have token balance of 41169 for sender on token3", async function () {
+      const bal3 = await token3.balanceOf(owner.address);
+      expect(bal3).to.equal(41169);
+    });
+  });
 });
