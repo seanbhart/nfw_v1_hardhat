@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+// pragma solidity ^0.8.0;
+pragma solidity >=0.7.6;
 
 import 'hardhat/console.sol';
+// import './interfaces/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
 
@@ -43,7 +45,9 @@ contract NFTPv1 is Ownable {
     // constructor(address _feeRecipientSetter) Ownable() {
     //     feeRecipientSetter = _feeRecipientSetter;
     // }
-    constructor() Ownable() {}
+    constructor() Ownable() {
+        console.log("NFTPv1 constructor");
+    }
 
     /* BOOK FUNCTIONS
     */

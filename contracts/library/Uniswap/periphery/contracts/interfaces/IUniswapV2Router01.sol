@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: nA
 pragma solidity >=0.6.2;
 
 interface IUniswapV2Router01 {
