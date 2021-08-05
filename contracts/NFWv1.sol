@@ -13,6 +13,12 @@ struct Offer {
     uint amount;
 }
 
+struct CPI {
+    uint x;
+    uint y;
+    uint k;
+}
+
 contract NFWv1 is Ownable {
     address public feeRecipient;
     address public feeRecipientSetter;
@@ -34,6 +40,12 @@ contract NFWv1 is Ownable {
     // account address => NFW symbol => Offer list
     mapping(address => mapping(string => Offer[])) public getOffers;
 
+    /* CONST. PROD. AMM
+    */
+    // token0 => token1 => CPI
+    mapping(address => mapping(address => CPI)) public getCPI;
+    event Swap(address account_, address tokenHave_, address tokenWant_, uint input_, uint output_);
+
     event Deposit(address account_, address token_, uint amount_);
     event Withdrawal(address account_, address token_, uint amount_);
     event Transfer(address token_, address from_, address to_, uint amount_);
@@ -45,8 +57,57 @@ contract NFWv1 is Ownable {
     // constructor(address _feeRecipientSetter) Ownable() {
     //     feeRecipientSetter = _feeRecipientSetter;
     // }
-    constructor() Ownable() {
+    constructor(address token0, address token1) Ownable() {
         console.log("NFWv1 constructor");
+        CPI memory initCPI;
+        initCPI.x = 1000;
+        initCPI.y = 1000;
+        initCPI.k = 1000000;
+        getCPI[token0][token1] = initCPI;
+    }
+
+    /* CP AMM FUNCTIONS
+    */
+    function swap(
+        address _account,
+        address _tokenHave,
+        address _tokenWant,
+        uint _give
+    ) public virtual {
+        require(_give > 0, 'NFWv1: ILLEGAL SWAP INPUT');
+
+        // Get the token pair Constant Product Invariant data (and liquidity amounts)
+        CPI memory swapCPI;
+        bool tokenHaveFirst = true;
+        if (getCPI[_tokenHave][_tokenWant].k != 0) {
+            swapCPI = getCPI[_tokenHave][_tokenWant];
+        } else if (getCPI[_tokenWant][_tokenHave].k != 0) {
+            swapCPI = getCPI[_tokenWant][_tokenHave];
+            tokenHaveFirst = false;
+        }
+        require(swapCPI.k != 0, 'NFWv1: TOKEN PAIR NOT FOUND');
+
+        // Calculate the amount of wanted token to return
+        // Invariant / (tokenHave + give) = tokenWant new LP amount
+        // tokenWant current - tokenWant new LP amount = tokenWant return amount
+        uint x = tokenHaveFirst ? swapCPI.x : swapCPI.y;
+        uint y = tokenHaveFirst ? swapCPI.y : swapCPI.x;
+        uint output = y - (swapCPI.k / (x + _give));
+        console.log("swap output: ", output);
+
+        // Update the stored CPI
+        swapCPI.x = x + _give;
+        swapCPI.y = y - output;
+        tokenHaveFirst ? getCPI[_tokenHave][_tokenWant] = swapCPI : getCPI[_tokenWant][_tokenHave] = swapCPI;
+        console.log("swapCPI: ", swapCPI.x, swapCPI.y, swapCPI.k);
+
+        // Adjust the account's balances
+        uint currentHave = getBook[_account][_tokenHave];
+        getBook[_account][_tokenHave] = currentHave - _give;
+        uint currentWant = getBook[_account][_tokenWant];
+        getBook[_account][_tokenWant] = currentWant + output;
+
+        emit Swap(_account, _tokenHave, _tokenWant, _give, output);
     }
 
     /* BOOK FUNCTIONS
