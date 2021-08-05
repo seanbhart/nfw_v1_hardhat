@@ -38,12 +38,6 @@ describe("NFWv1 contract", function () {
 
   before(async function () {
     [owner, addr1, addr2, ...addrs] = await ethers.getSigners();
-    console.log(
-      "Created signers: ",
-      owner.address,
-      addr1.address,
-      addr2.address
-    );
 
     // Deploy the test ERC20 token
     tokenFactory = await ethers.getContractFactory("NFW_ERC20");

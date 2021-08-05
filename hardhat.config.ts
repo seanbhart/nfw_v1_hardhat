@@ -90,7 +90,7 @@ const config: HardhatUserConfig = {
     enabled: true,
     coinmarketcap: "3a70c918-991b-4402-8016-c6ba1ca65a13",
     currency: "USD",
-    gasPrice: 30,
+    gasPrice: 70,
   },
 };
 

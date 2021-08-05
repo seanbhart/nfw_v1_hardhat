@@ -5,6 +5,7 @@ pragma solidity >=0.7.6;
 import 'hardhat/console.sol';
 // import './interfaces/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import '@openzeppelin/contracts/math/SafeMath.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
 
 
@@ -20,8 +21,18 @@ struct CPI {
 }
 
 contract NFWv1 is Ownable {
+    using SafeMath for uint;
+    
     address public feeRecipient;
     address public feeRecipientSetter;
+
+    uint private unlocked = 1;
+    modifier lock() {
+        require(unlocked == 1, 'NFWv1: LOCKED');
+        unlocked = 0;
+        _;
+        unlocked = 1;
+    }
 
     // address public factory;
     // address private _creator;
@@ -42,7 +53,7 @@ contract NFWv1 is Ownable {
 
     /* CONST. PROD. AMM
     */
-    // token0 => token1 => CPI
+    // token0 => token1 => CPI <~~ tokens always ordered by address (smallest first)
     mapping(address => mapping(address => CPI)) public getCPI;
     event Swap(address account_, address tokenHave_, address tokenWant_, uint input_, uint output_);
 
@@ -57,34 +68,47 @@ contract NFWv1 is Ownable {
     // constructor(address _feeRecipientSetter) Ownable() {
     //     feeRecipientSetter = _feeRecipientSetter;
     // }
-    constructor(address token0, address token1) Ownable() {
+    constructor(address token0, address token1, address token2) Ownable() {
         console.log("NFWv1 constructor");
-        CPI memory initCPI;
-        initCPI.x = 1000;
-        initCPI.y = 1000;
-        initCPI.k = 1000000;
-        getCPI[token0][token1] = initCPI;
+        CPI memory initCPI1;
+        initCPI1.x = 1000;
+        initCPI1.y = 1000;
+        initCPI1.k = 1000000;
+        _safeSaveCPI(token0, token1, initCPI1);
+        CPI memory initCPI2;
+        initCPI2.x = 1000;
+        initCPI2.y = 1000;
+        initCPI2.k = 1000000;
+        _safeSaveCPI(token1, token2, initCPI2);
     }
 
     /* CP AMM FUNCTIONS
     */
     function swap(
         address _account,
+        address _token0,
+        address _token1,
+        address _token2,
+        uint _give
+    ) public virtual lock {
+        require(_give > 0, 'NFWv1: ILLEGAL SWAP INPUT');
+
+        uint output12 = _swap(_account, _token0, _token1, _give);
+        uint output23 = _swap(_account, _token0, _token1, output12);
+
+        emit Swap(_account, _token0, _token2, _give, output23);
+    }
+
+    function _swap(
+        address _account,
         address _tokenHave,
         address _tokenWant,
         uint _give
-    ) public virtual {
+    ) private returns (uint output) {
         require(_give > 0, 'NFWv1: ILLEGAL SWAP INPUT');
 
         // Get the token pair Constant Product Invariant data (and liquidity amounts)
-        CPI memory swapCPI;
-        bool tokenHaveFirst = true;
-        if (getCPI[_tokenHave][_tokenWant].k != 0) {
-            swapCPI = getCPI[_tokenHave][_tokenWant];
-        } else if (getCPI[_tokenWant][_tokenHave].k != 0) {
-            swapCPI = getCPI[_tokenWant][_tokenHave];
-            tokenHaveFirst = false;
-        }
+        (CPI memory swapCPI, bool tokenHaveFirst) = _safeGetCPI(_tokenHave, _tokenWant);
         require(swapCPI.k != 0, 'NFWv1: TOKEN PAIR NOT FOUND');
 
         // Calculate the amount of wanted token to return
@@ -92,22 +116,20 @@ contract NFWv1 is Ownable {
         // tokenWant current - tokenWant new LP amount = tokenWant return amount
         uint x = tokenHaveFirst ? swapCPI.x : swapCPI.y;
         uint y = tokenHaveFirst ? swapCPI.y : swapCPI.x;
-        uint output = y - (swapCPI.k / (x + _give));
+        // y - (k / (x + _give));
+        output = y.sub(swapCPI.k.div(x.add(_give)));
         console.log("swap output: ", output);
 
         // Update the stored CPI
-        swapCPI.x = x + _give;
-        swapCPI.y = y - output;
-        tokenHaveFirst ? getCPI[_tokenHave][_tokenWant] = swapCPI : getCPI[_tokenWant][_tokenHave] = swapCPI;
+        swapCPI.x = x.add(_give);
+        swapCPI.y = y.sub(output);
         console.log("swapCPI: ", swapCPI.x, swapCPI.y, swapCPI.k);
+        console.log("x price: ", swapCPI.x / swapCPI.y);
+        _safeSaveCPI(_tokenHave, _tokenWant, swapCPI);
 
         // Adjust the account's balances
-        uint currentHave = getBook[_account][_tokenHave];
-        getBook[_account][_tokenHave] = currentHave - _give;
-        uint currentWant = getBook[_account][_tokenWant];
-        getBook[_account][_tokenWant] = currentWant + output;
-
-        emit Swap(_account, _tokenHave, _tokenWant, _give, output);
+        _safeUpdateBook(_account, _tokenHave, 0, _give);
+        _safeUpdateBook(_account, _tokenWant, output, 0);
     }
 
     /* BOOK FUNCTIONS
@@ -115,7 +137,7 @@ contract NFWv1 is Ownable {
     function deposit(
         address _token,
         uint _amount
-    ) public virtual {
+    ) public virtual lock {
         require(_amount > 0, 'NFWv1: ILLEGAL DEPOSIT AMOUNT');
 
         uint currentBalance = 0;
@@ -128,14 +150,14 @@ contract NFWv1 is Ownable {
         fromToken.transferFrom(msg.sender, address(this), _amount);
 
         // Increase the internal book balance to account for transfer
-        getBook[msg.sender][_token] = currentBalance + _amount;
+        getBook[msg.sender][_token] = currentBalance.add(_amount);
         emit Deposit(msg.sender, _token, _amount);
     }
 
     function withdraw(
         address _token,
         uint _amount
-    ) public virtual {
+    ) public virtual lock {
         // Check available Book Balance
         uint bookBalance = getBook[msg.sender][_token];
         require(bookBalance >= _amount, 'NFWv1: INSUFFICIENT BOOK BALANCE');
@@ -145,7 +167,7 @@ contract NFWv1 is Ownable {
         toToken.transfer(msg.sender, _amount);
 
         // Decrease the internal book balance to account for transfer
-        getBook[msg.sender][_token] = getBook[msg.sender][_token] - _amount;
+        getBook[msg.sender][_token] = getBook[msg.sender][_token].sub(_amount);
         emit Withdrawal(msg.sender, _token, _amount);
     }
 
@@ -153,7 +175,7 @@ contract NFWv1 is Ownable {
         address _token,
         address _to,
         uint _amount
-    ) public virtual {
+    ) public virtual lock {
         _safeTransfer(_token, msg.sender, _to, _amount);
         emit Transfer(_token, msg.sender, _to, _amount);
     }
@@ -162,7 +184,7 @@ contract NFWv1 is Ownable {
     */
     function mint(
         string memory _symbol
-    ) public virtual {
+    ) public virtual lock {
         require(getNfwOwner[_symbol] == address(0), 'NFWv1: TOKEN_EXISTS');
         getNfwOwner[_symbol] = msg.sender;
         getOwnerNfws[msg.sender].push(_symbol);
@@ -175,7 +197,7 @@ contract NFWv1 is Ownable {
         string memory _symbol,
         address _token,
         uint _amount
-    ) public virtual {
+    ) public virtual lock {
         // Check ownership
         require(getNfwOwner[_symbol] == msg.sender, 'NFWv1: UNAUTHORIZED');
 
@@ -184,8 +206,8 @@ contract NFWv1 is Ownable {
         require(bookBalance >= _amount, 'NFWv1: INSUFFICIENT BOOK BALANCE');
 
         // Transfer Book Balance to NFW Balance
-        getBook[msg.sender][_token] = getBook[msg.sender][_token] - _amount;
-        getNfw[_symbol][_token] = getNfw[_symbol][_token] + _amount;
+        getBook[msg.sender][_token] = getBook[msg.sender][_token].sub(_amount);
+        getNfw[_symbol][_token] = getNfw[_symbol][_token].add(_amount);
 
         emit Fill(_symbol, _token, _amount);
 
@@ -208,7 +230,7 @@ contract NFWv1 is Ownable {
         string memory _symbol,
         address _token,
         uint _amount
-    ) public virtual {
+    ) public virtual lock {
         // Check ownership
         require(getNfwOwner[_symbol] == msg.sender, 'NFWv1: UNAUTHORIZED');
 
@@ -217,8 +239,8 @@ contract NFWv1 is Ownable {
         require(nfwBalance >= _amount, 'NFWv1: INSUFFICIENT NFW BALANCE');
 
         // Transfer Book Balance to NFW Balance
-        getNfw[_symbol][_token] = getNfw[_symbol][_token] - _amount;
-        getBook[msg.sender][_token] = getBook[msg.sender][_token] + _amount;
+        getNfw[_symbol][_token] = getNfw[_symbol][_token].sub(_amount);
+        getBook[msg.sender][_token] = getBook[msg.sender][_token].add(_amount);
 
         emit Drain(_symbol, _token, _amount);
     }
@@ -226,7 +248,7 @@ contract NFWv1 is Ownable {
     function assign(
         string memory _symbol,
         address _to
-    ) public virtual {
+    ) public virtual lock {
         // Check ownership
         require(getNfwOwner[_symbol] == msg.sender, 'NFWv1: UNAUTHORIZED');
 
@@ -263,8 +285,33 @@ contract NFWv1 is Ownable {
     ) private {
         // Ensure the from address has enough balance for the transfer
         require(getBook[_from][_token] >= _amount, 'NFWv1: INSUFFICIENT FUNDS');
-        getBook[_from][_token] = getBook[_from][_token] - _amount;
-        getBook[_to][_token] = getBook[_to][_token] + _amount;
+        getBook[_from][_token] = getBook[_from][_token].sub(_amount);
+        getBook[_to][_token] = getBook[_to][_token].add(_amount);
+    }
+
+    function _safeUpdateBook(address _account, address _token, uint add, uint subtract) private {
+        require(_account != address(0) && _token != address(0), 'NFWv1: AN ADDRESS IS INVALID');
+        // require(add > 0 && subtract > 0, 'NFWv1: INVALID ADJUSTMENT AMOUNT');
+        uint currentBal = getBook[_account][_token];
+        console.log("_safeUpdateBook: ", currentBal, add, subtract);
+        getBook[_account][_token] = currentBal.add(add).sub(subtract);
+    }
+
+    // Will find CPI (if exists) regardless of the order of addresses passed
+    function _safeGetCPI(address _token0, address _token1) private view returns (CPI memory gotCPI, bool inputOrder) {
+        require(_token0 != address(0) && _token1 != address(0), 'NFWv1: A TOKEN ADDRESS IS INVALID');
+        address tokenA = _token0 < _token1 ? _token0 : _token1;
+        address tokenB = _token0 < _token1 ? _token1 : _token0;
+        inputOrder = tokenA == _token0 ? true : false;
+        gotCPI = getCPI[tokenA][tokenB];
+    }
+    // Will save CPI correctly regardless of the order of addresses passed
+    function _safeSaveCPI(address _token0, address _token1, CPI memory newCPI) private {
+        require(_token0 != address(0) && _token1 != address(0), 'NFWv1: A TOKEN ADDRESS IS INVALID');
+        require(newCPI.k != 0, 'NFWv1: INVALID CPI DATA');
+        address tokenA = _token0 < _token1 ? _token0 : _token1;
+        address tokenB = _token0 < _token1 ? _token1 : _token0;
+        getCPI[tokenA][tokenB] = newCPI;
     }
 
     /* FEE FUNCTIONS
