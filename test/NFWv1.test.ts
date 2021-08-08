@@ -65,32 +65,16 @@ describe("NFWv1 contract", function () {
     });
   });
 
-  describe("Swap2", async function () {
-    for (let i = 0; i < 5; i++) {
-      it("Should have swapped token1 for token2", async function () {
-        await nfw.swap(
-          owner.address,
-          token1.address,
-          token2.address,
-          token3.address,
-          100000
-        );
-        const bal1 = await nfw.getBook(owner.address, token1.address);
-        const bal2 = await nfw.getBook(owner.address, token2.address);
-        console.log(
-          "post-swap balances: ",
-          BigNumber.from(bal1).toString(),
-          BigNumber.from(bal2).toString()
-        );
-        expect(1).to.equal(1);
-      });
-    }
-  });
-
-  // describe("Swap", async function () {
+  // describe("Swap2", async function () {
   //   for (let i = 0; i < 5; i++) {
   //     it("Should have swapped token1 for token2", async function () {
-  //       await nfw.swap(owner.address, token1.address, token2.address, 10);
+  //       await nfw.swap(
+  //         owner.address,
+  //         token1.address,
+  //         token2.address,
+  //         token3.address,
+  //         100000
+  //       );
   //       const bal1 = await nfw.getBook(owner.address, token1.address);
   //       const bal2 = await nfw.getBook(owner.address, token2.address);
   //       console.log(
@@ -98,11 +82,27 @@ describe("NFWv1 contract", function () {
   //         BigNumber.from(bal1).toString(),
   //         BigNumber.from(bal2).toString()
   //       );
-  //       expect(bal1).to.equal(90);
-  //       expect(bal2).to.equal(10);
+  //       expect(1).to.equal(1);
   //     });
   //   }
   // });
+
+  describe("Swap", async function () {
+    for (let i = 0; i < 5; i++) {
+      it("Should have swapped token1 for token2", async function () {
+        await nfw.swap(owner.address, token1.address, token2.address, 100000);
+        const bal1 = await nfw.getBook(owner.address, token1.address);
+        const bal2 = await nfw.getBook(owner.address, token2.address);
+        console.log(
+          "post-swap balances: ",
+          BigNumber.from(bal1).toString(),
+          BigNumber.from(bal2).toString()
+        );
+        expect(bal1).to.equal(900000 - 10000 * i);
+        expect(bal2).to.equal(10);
+      });
+    }
+  });
 
   // describe("Balance", function () {
   //   it("Should have book value of 100 erc20 for sender", async function () {

@@ -4,7 +4,7 @@ pragma solidity >=0.5.0;
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
 
 import "./SafeMath.sol";
-import 'hardhat/console.sol';
+// import 'hardhat/console.sol';
 
 library UniswapV2Library {
     using SafeMath for uint;
@@ -18,30 +18,30 @@ library UniswapV2Library {
 
     // calculates the CREATE2 address for a pair without making any external calls
     function pairFor(address factory, address tokenA, address tokenB) internal view returns (address pair) {
-        uint g0 = gasleft(); // GAS CALC
+        // uint g0 = gasleft(); // GAS CALC
         (address token0, address token1) = sortTokens(tokenA, tokenB);
-        uint g1 = gasleft(); // GAS CALC
-        console.log("GAS: LIBRARY: PAIR FOR - SORT TOKENS:", g0 - g1); // GAS CALC
+        // uint g1 = gasleft(); // GAS CALC
+        // console.log("GAS: LIBRARY: PAIR FOR - SORT TOKENS:", g0 - g1); // GAS CALC
         pair = address(uint(keccak256(abi.encodePacked(
                 hex'ff',
                 factory,
                 keccak256(abi.encodePacked(token0, token1)),
                 // hex'96e8ac4277198ff8b6f785478aa9a39f403cb768dd02cbee326c3e7da348845f' // init code hash
-                hex'70ed1cfe6f4caff33ccbcd4e541b652f2fdd6586d1391e5a0a16a0d41e14a2b2' // init code hash
+                hex'167beb2b12c1e5d4153f45fd6d193e72fad545a7ea10bd37b896ee80921de18c' // init code hash
             ))));
-        uint g2 = gasleft(); // GAS CALC
-        console.log("GAS: LIBRARY: PAIR FOR - PAIR ADDRESS:", g1 - g2); // GAS CALC
+        // uint g2 = gasleft(); // GAS CALC
+        // console.log("GAS: LIBRARY: PAIR FOR - PAIR ADDRESS:", g1 - g2); // GAS CALC
     }
 
     // fetches and sorts the reserves for a pair
     function getReserves(address factory, address tokenA, address tokenB) internal view returns (uint reserveA, uint reserveB) {
-        uint g0 = gasleft(); // GAS CALC
+        // uint g0 = gasleft(); // GAS CALC
         (address token0,) = sortTokens(tokenA, tokenB);
-        uint g1 = gasleft(); // GAS CALC
-        console.log("GAS: LIBRARY: GET RESERVES - SORT TOKENS:", g0 - g1); // GAS CALC
+        // uint g1 = gasleft(); // GAS CALC
+        // console.log("GAS: LIBRARY: GET RESERVES - SORT TOKENS:", g0 - g1); // GAS CALC
         (uint reserve0, uint reserve1,) = IUniswapV2Pair(pairFor(factory, tokenA, tokenB)).getReserves();
-        uint g2 = gasleft(); // GAS CALC
-        console.log("GAS: LIBRARY: GET RESERVES - GET RESERVES:", g1 - g2); // GAS CALC
+        // uint g2 = gasleft(); // GAS CALC
+        // console.log("GAS: LIBRARY: GET RESERVES - GET RESERVES:", g1 - g2); // GAS CALC
         (reserveA, reserveB) = tokenA == token0 ? (reserve0, reserve1) : (reserve1, reserve0);
     }
 

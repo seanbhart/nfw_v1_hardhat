@@ -88,15 +88,18 @@ contract NFWv1 is Ownable {
         address _account,
         address _token0,
         address _token1,
-        address _token2,
+        // address _token2,
         uint _give
     ) public virtual lock {
+        uint g0 = gasleft(); // GAS CALC
         require(_give > 0, 'NFWv1: ILLEGAL SWAP INPUT');
 
         uint output12 = _swap(_account, _token0, _token1, _give);
-        uint output23 = _swap(_account, _token1, _token2, output12);
+        // uint output23 = _swap(_account, _token1, _token2, output12);
 
-        emit Swap(_account, _token0, _token2, _give, output23);
+        emit Swap(_account, _token0, _token1, _give, output12);
+        uint g1 = gasleft(); // GAS CALC
+        console.log("GAS: NFWv1: SWAP - SWAP:", g0 - g1); // GAS CALC
     }
 
     function _swap(
@@ -105,6 +108,7 @@ contract NFWv1 is Ownable {
         address _tokenWant,
         uint _give
     ) private returns (uint output) {
+        uint g0 = gasleft(); // GAS CALC
         require(_give > 0, 'NFWv1: ILLEGAL SWAP INPUT');
 
         // Get the token pair Constant Product Invariant data (and liquidity amounts)
@@ -120,6 +124,9 @@ contract NFWv1 is Ownable {
         output = y.sub(swapCPI.k.div(x.add(_give)));
         console.log("swap output: ", output);
 
+        uint g1 = gasleft(); // GAS CALC
+        console.log("GAS: NFWv1: _SWAP - CALCULATE TOKENS OUT:", g0 - g1); // GAS CALC
+
         // Update the stored CPI
         swapCPI.x = x.add(_give);
         swapCPI.y = y.sub(output);
@@ -132,6 +139,9 @@ contract NFWv1 is Ownable {
         // Adjust the account's balances
         _safeUpdateBook(_account, _tokenHave, 0, _give);
         _safeUpdateBook(_account, _tokenWant, output, 0);
+
+        uint g2 = gasleft(); // GAS CALC
+        console.log("GAS: NFWv1: _SWAP - SWAP:", g1 - g2); // GAS CALC
     }
 
     /* BOOK FUNCTIONS

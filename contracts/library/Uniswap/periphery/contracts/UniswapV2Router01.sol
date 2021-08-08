@@ -9,7 +9,7 @@ import './interfaces/IUniswapV2Router01.sol';
 import './interfaces/IERC20.sol';
 import './interfaces/IWETH.sol';
 
-import 'hardhat/console.sol';
+// import 'hardhat/console.sol';
 
 contract UniswapV2Router01 is IUniswapV2Router01 {
     address public immutable override factory;
@@ -42,16 +42,16 @@ contract UniswapV2Router01 is IUniswapV2Router01 {
         if (IUniswapV2Factory(factory).getPair(tokenA, tokenB) == address(0)) {
             IUniswapV2Factory(factory).createPair(tokenA, tokenB);
         }
-        uint g0 = gasleft(); // GAS CALC
+        // uint g0 = gasleft(); // GAS CALC
         (uint reserveA, uint reserveB) = UniswapV2Library.getReserves(factory, tokenA, tokenB);
-        uint g1 = gasleft(); // GAS CALC
-        console.log("GAS: ROUTER: _ADD LIQUIDITY - GET RESERVES:", g0 - g1); // GAS CALC
+        // uint g1 = gasleft(); // GAS CALC
+        // console.log("GAS: ROUTER: _ADD LIQUIDITY - GET RESERVES:", g0 - g1); // GAS CALC
         if (reserveA == 0 && reserveB == 0) {
             (amountA, amountB) = (amountADesired, amountBDesired);
         } else {
             uint amountBOptimal = UniswapV2Library.quote(amountADesired, reserveA, reserveB);
-            uint g2 = gasleft(); // GAS CALC
-            console.log("GAS: ROUTER: _ADD LIQUIDITY - AMT B QUOTE:", g1 - g2); // GAS CALC
+            // uint g2 = gasleft(); // GAS CALC
+            // console.log("GAS: ROUTER: _ADD LIQUIDITY - AMT B QUOTE:", g1 - g2); // GAS CALC
             if (amountBOptimal <= amountBDesired) {
                 require(amountBOptimal >= amountBMin, 'UniswapV2Router: INSUFFICIENT_B_AMOUNT');
                 (amountA, amountB) = (amountADesired, amountBOptimal);
@@ -74,19 +74,19 @@ contract UniswapV2Router01 is IUniswapV2Router01 {
         uint deadline
     ) external override ensure(deadline) returns (uint amountA, uint amountB, uint liquidity) {
         (amountA, amountB) = _addLiquidity(tokenA, tokenB, amountADesired, amountBDesired, amountAMin, amountBMin);
-        uint g0 = gasleft(); // GAS CALC
+        // uint g0 = gasleft(); // GAS CALC
         address pair = UniswapV2Library.pairFor(factory, tokenA, tokenB);
-        uint g1 = gasleft(); // GAS CALC
-        console.log("GAS: ROUTER: ADD LIQUIDITY - GET PAIR:", g0 - g1); // GAS CALC
+        // uint g1 = gasleft(); // GAS CALC
+        // console.log("GAS: ROUTER: ADD LIQUIDITY - GET PAIR:", g0 - g1); // GAS CALC
         TransferHelper.safeTransferFrom(tokenA, msg.sender, pair, amountA);
-        uint g2 = gasleft(); // GAS CALC
-        console.log("GAS: ROUTER: ADD LIQUIDITY - TRANSFER TOKEN:", g1 - g2); // GAS CALC
+        // uint g2 = gasleft(); // GAS CALC
+        // console.log("GAS: ROUTER: ADD LIQUIDITY - TRANSFER TOKEN:", g1 - g2); // GAS CALC
         TransferHelper.safeTransferFrom(tokenB, msg.sender, pair, amountB);
-        uint g3 = gasleft(); // GAS CALC
-        console.log("GAS: ROUTER: ADD LIQUIDITY - TRANSFER TOKEN:", g2 - g3); // GAS CALC
+        // uint g3 = gasleft(); // GAS CALC
+        // console.log("GAS: ROUTER: ADD LIQUIDITY - TRANSFER TOKEN:", g2 - g3); // GAS CALC
         liquidity = IUniswapV2Pair(pair).mint(to);
-        uint g4 = gasleft(); // GAS CALC
-        console.log("GAS: ROUTER: ADD LIQUIDITY - MINT:", g3 - g4); // GAS CALC
+        // uint g4 = gasleft(); // GAS CALC
+        // console.log("GAS: ROUTER: ADD LIQUIDITY - MINT:", g3 - g4); // GAS CALC
     }
     function addLiquidityETH(
         address token,
@@ -185,19 +185,19 @@ contract UniswapV2Router01 is IUniswapV2Router01 {
     // requires the initial amount to have already been sent to the first pair
     function _swap(uint[] memory amounts, address[] memory path, address _to) private {
         for (uint i; i < path.length - 1; i++) {
-            uint g0 = gasleft(); // GAS CALC
+            // uint g0 = gasleft(); // GAS CALC
             (address input, address output) = (path[i], path[i + 1]);
             (address token0,) = UniswapV2Library.sortTokens(input, output);
-            uint g1 = gasleft(); // GAS CALC
-            console.log("GAS: ROUTER: _SWAP - SORT TOKENS:", g0 - g1); // GAS CALC
+            // uint g1 = gasleft(); // GAS CALC
+            // console.log("GAS: ROUTER: _SWAP - SORT TOKENS:", g0 - g1); // GAS CALC
             uint amountOut = amounts[i + 1];
             (uint amount0Out, uint amount1Out) = input == token0 ? (uint(0), amountOut) : (amountOut, uint(0));
             address to = i < path.length - 2 ? UniswapV2Library.pairFor(factory, output, path[i + 2]) : _to;
-            uint g2 = gasleft(); // GAS CALC
-            console.log("GAS: ROUTER: _SWAP - PAIR FOR:", g1 - g2); // GAS CALC
+            // uint g2 = gasleft(); // GAS CALC
+            // console.log("GAS: ROUTER: _SWAP - PAIR FOR:", g1 - g2); // GAS CALC
             IUniswapV2Pair(UniswapV2Library.pairFor(factory, input, output)).swap(amount0Out, amount1Out, to, new bytes(0));
-            uint g3 = gasleft(); // GAS CALC
-            console.log("GAS: ROUTER: _SWAP - PAIR SWAP:", g2 - g3); // GAS CALC
+            // uint g3 = gasleft(); // GAS CALC
+            // console.log("GAS: ROUTER: _SWAP - PAIR SWAP:", g2 - g3); // GAS CALC
         }
     }
     function swapExactTokensForTokens(
@@ -207,17 +207,17 @@ contract UniswapV2Router01 is IUniswapV2Router01 {
         address to,
         uint deadline
     ) external override ensure(deadline) returns (uint[] memory amounts) {
-        uint g0 = gasleft(); // GAS CALC
+        // uint g0 = gasleft(); // GAS CALC
         amounts = UniswapV2Library.getAmountsOut(factory, amountIn, path);
-        uint g1 = gasleft(); // GAS CALC
-        console.log("GAS: ROUTER: SWAP EXACT FOR - GET AMOUNTS OUT:", g0 - g1); // GAS CALC
+        // uint g1 = gasleft(); // GAS CALC
+        // console.log("GAS: ROUTER: SWAP EXACT FOR - GET AMOUNTS OUT:", g0 - g1); // GAS CALC
         require(amounts[amounts.length - 1] >= amountOutMin, 'UniswapV2Router: INSUFFICIENT_OUTPUT_AMOUNT');
         TransferHelper.safeTransferFrom(path[0], msg.sender, UniswapV2Library.pairFor(factory, path[0], path[1]), amounts[0]);
-        uint g2 = gasleft(); // GAS CALC
-        console.log("GAS: ROUTER: SWAP EXACT FOR - SAFE TX FROM:", g1 - g2); // GAS CALC
+        // uint g2 = gasleft(); // GAS CALC
+        // console.log("GAS: ROUTER: SWAP EXACT FOR - SAFE TX FROM:", g1 - g2); // GAS CALC
         _swap(amounts, path, to);
-        uint g3 = gasleft(); // GAS CALC
-        console.log("GAS: ROUTER: SWAP EXACT FOR - SWAP:", g2 - g3); // GAS CALC
+        // uint g3 = gasleft(); // GAS CALC
+        // console.log("GAS: ROUTER: SWAP EXACT FOR - SWAP:", g2 - g3); // GAS CALC
     }
     function swapTokensForExactTokens(
         uint amountOut,
