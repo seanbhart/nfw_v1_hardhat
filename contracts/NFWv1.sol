@@ -71,14 +71,14 @@ contract NFWv1 is Ownable {
     constructor(address token0, address token1, address token2) Ownable() {
         console.log("NFWv1 constructor");
         CPI memory initCPI1;
-        initCPI1.x = 1000;
-        initCPI1.y = 1000;
-        initCPI1.k = 1000000;
+        initCPI1.x = 1000000;
+        initCPI1.y = 1000000;
+        initCPI1.k = 1000000000000;
         _safeSaveCPI(token0, token1, initCPI1);
         CPI memory initCPI2;
-        initCPI2.x = 1000;
-        initCPI2.y = 1000;
-        initCPI2.k = 1000000;
+        initCPI2.x = 1000000;
+        initCPI2.y = 1000000;
+        initCPI2.k = 1000000000000;
         _safeSaveCPI(token1, token2, initCPI2);
     }
 
@@ -94,7 +94,7 @@ contract NFWv1 is Ownable {
         require(_give > 0, 'NFWv1: ILLEGAL SWAP INPUT');
 
         uint output12 = _swap(_account, _token0, _token1, _give);
-        uint output23 = _swap(_account, _token0, _token1, output12);
+        uint output23 = _swap(_account, _token1, _token2, output12);
 
         emit Swap(_account, _token0, _token2, _give, output23);
     }
@@ -124,7 +124,9 @@ contract NFWv1 is Ownable {
         swapCPI.x = x.add(_give);
         swapCPI.y = y.sub(output);
         console.log("swapCPI: ", swapCPI.x, swapCPI.y, swapCPI.k);
-        console.log("x price: ", swapCPI.x / swapCPI.y);
+        console.log("old y price (in x thousandths): ", x.mul(1000).div(y));
+        console.log("y price (in x thousandths): ", swapCPI.x.mul(1000).div(swapCPI.y));
+        console.log("y price slippage (in x thousandths): ", swapCPI.x.mul(1000).div(swapCPI.y) - x.mul(1000).div(y));
         _safeSaveCPI(_tokenHave, _tokenWant, swapCPI);
 
         // Adjust the account's balances

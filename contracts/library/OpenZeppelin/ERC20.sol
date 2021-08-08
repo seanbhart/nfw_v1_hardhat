@@ -55,7 +55,7 @@ contract NFW_ERC20 is Context, IERC20 { //}, IERC20Metadata {
     constructor(string memory name_, string memory symbol_, address owner_) {
         _name = name_;
         _symbol = symbol_;
-        _balances[owner_] = 50000;
+        _balances[owner_] = 50000000;
     }
 
     /**

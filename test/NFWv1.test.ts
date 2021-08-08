@@ -52,8 +52,8 @@ describe("NFWv1 contract", function () {
     console.log("Deployed NFW");
 
     // Approve and transfer 100 from ERC20 to NFW Wallet
-    await token1.approve(nfw.address, 100);
-    await nfw.deposit(token1.address, 100);
+    await token1.approve(nfw.address, 1000000);
+    await nfw.deposit(token1.address, 1000000);
     console.log(
       "Deployed NFW Wallet and deposited initial 100 to owner on token1"
     );
@@ -73,7 +73,7 @@ describe("NFWv1 contract", function () {
           token1.address,
           token2.address,
           token3.address,
-          10
+          100000
         );
         const bal1 = await nfw.getBook(owner.address, token1.address);
         const bal2 = await nfw.getBook(owner.address, token2.address);

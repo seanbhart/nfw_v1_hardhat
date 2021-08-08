@@ -8,6 +8,8 @@ import './interfaces/IERC20.sol';
 import './interfaces/IUniswapV2Factory.sol';
 import './interfaces/IUniswapV2Callee.sol';
 
+import 'hardhat/console.sol';
+
 contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     using SafeMath  for uint;
     using UQ112x112 for uint224;
@@ -71,6 +73,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
 
     // update reserves and, on the first call per block, price accumulators
     function _update(uint balance0, uint balance1, uint112 _reserve0, uint112 _reserve1) private {
+        uint g0 = gasleft(); // GAS CALC
         require(balance0 <= uint112(-1) && balance1 <= uint112(-1), 'UniswapV2: OVERFLOW');
         uint32 blockTimestamp = uint32(block.timestamp % 2**32);
         uint32 timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
@@ -83,6 +86,8 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
         reserve1 = uint112(balance1);
         blockTimestampLast = blockTimestamp;
         emit Sync(reserve0, reserve1);
+        uint g1 = gasleft(); // GAS CALC
+        console.log("GAS: V2 PAIR: _UPDATE - ALL:", g0 - g1); // GAS CALC
     }
 
     // if fee is on, mint liquidity equivalent to 1/6th of the growth in sqrt(k)
@@ -108,13 +113,20 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
 
     // this low-level function should be called from a contract which performs important safety checks
     function mint(address to) external lock returns (uint liquidity) {
+        uint g0 = gasleft(); // GAS CALC
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
+        uint g1 = gasleft(); // GAS CALC
+        console.log("GAS: V2 PAIR: MINT - GET RESERVES:", g0 - g1); // GAS CALC
         uint balance0 = IERC20(token0).balanceOf(address(this));
         uint balance1 = IERC20(token1).balanceOf(address(this));
+        uint g2 = gasleft(); // GAS CALC
+        console.log("GAS: V2 PAIR: MINT - BALANCES:", g1 - g2); // GAS CALC
         uint amount0 = balance0.sub(_reserve0);
         uint amount1 = balance1.sub(_reserve1);
 
         bool feeOn = _mintFee(_reserve0, _reserve1);
+        uint g3 = gasleft(); // GAS CALC
+        console.log("GAS: V2 PAIR: MINT - MINT FEE:", g2 - g3); // GAS CALC
         uint _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
         if (_totalSupply == 0) {
             liquidity = Math.sqrt(amount0.mul(amount1)).sub(MINIMUM_LIQUIDITY);
@@ -124,8 +136,12 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
         }
         require(liquidity > 0, 'UniswapV2: INSUFFICIENT_LIQUIDITY_MINTED');
         _mint(to, liquidity);
+        uint g4 = gasleft(); // GAS CALC
+        console.log("GAS: V2 PAIR: MINT - _MINT:", g3 - g4); // GAS CALC
 
         _update(balance0, balance1, _reserve0, _reserve1);
+        uint g5 = gasleft(); // GAS CALC
+        console.log("GAS: V2 PAIR: MINT - _UPDATE:", g4 - g5); // GAS CALC
         if (feeOn) kLast = uint(reserve0).mul(reserve1); // reserve0 and reserve1 are up-to-date
         emit Mint(msg.sender, amount0, amount1);
     }
@@ -164,22 +180,30 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
         uint balance0;
         uint balance1;
         { // scope for _token{0,1}, avoids stack too deep errors
+        uint g0 = gasleft(); // GAS CALC
         address _token0 = token0;
         address _token1 = token1;
         require(to != _token0 && to != _token1, 'UniswapV2: INVALID_TO');
+        console.log("swap 0: ", _token0, to, amount0Out);
+        console.log("swap 1: ", _token1, to, amount1Out);
         if (amount0Out > 0) _safeTransfer(_token0, to, amount0Out); // optimistically transfer tokens
         if (amount1Out > 0) _safeTransfer(_token1, to, amount1Out); // optimistically transfer tokens
         if (data.length > 0) IUniswapV2Callee(to).uniswapV2Call(msg.sender, amount0Out, amount1Out, data);
         balance0 = IERC20(_token0).balanceOf(address(this));
         balance1 = IERC20(_token1).balanceOf(address(this));
+        uint g1 = gasleft(); // GAS CALC
+        console.log("GAS: V2 PAIR: SWAP - _SAFE TRANSFER & TOKEN BALANCES:", g0 - g1); // GAS CALC
         }
         uint amount0In = balance0 > _reserve0 - amount0Out ? balance0 - (_reserve0 - amount0Out) : 0;
         uint amount1In = balance1 > _reserve1 - amount1Out ? balance1 - (_reserve1 - amount1Out) : 0;
         require(amount0In > 0 || amount1In > 0, 'UniswapV2: INSUFFICIENT_INPUT_AMOUNT');
         { // scope for reserve{0,1}Adjusted, avoids stack too deep errors
+        uint g0 = gasleft(); // GAS CALC
         uint balance0Adjusted = balance0.mul(1000).sub(amount0In.mul(3));
         uint balance1Adjusted = balance1.mul(1000).sub(amount1In.mul(3));
         require(balance0Adjusted.mul(balance1Adjusted) >= uint(_reserve0).mul(_reserve1).mul(1000**2), 'UniswapV2: K');
+        uint g1 = gasleft(); // GAS CALC
+        console.log("GAS: V2 PAIR: SWAP - CPAMM MATH:", g0 - g1); // GAS CALC
         }
 
         _update(balance0, balance1, _reserve0, _reserve1);
